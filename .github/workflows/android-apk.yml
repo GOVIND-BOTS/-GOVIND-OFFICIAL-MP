@@ -1,4 +1,5 @@
 name: Build Android APK
+
 on:
   workflow_dispatch:
     inputs:
@@ -6,8 +7,15 @@ on:
         description: "HTTPS URL of the deployed GOVIND OFFICIAL MP server"
         required: true
         type: string
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - ".github/workflows/android-apk.yml"
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,8 +30,10 @@ jobs:
           gradle-version: "8.9"
       - name: Build debug APK
         env:
-          SERVER_URL: ${{ inputs.server_url }}
-        run: gradle -p android assembleDebug -PserverUrl="$SERVER_URL"
+          INPUT_SERVER_URL: ${{ inputs.server_url }}
+        run: |
+          SERVER_URL="${INPUT_SERVER_URL:-https://govind-official-mp.onrender.com}"
+          gradle -p android assembleDebug -PserverUrl="$SERVER_URL"
       - uses: actions/upload-artifact@v4
         with:
           name: govind-official-mp-debug-apk
