@@ -8,7 +8,7 @@ from io import BytesIO
 
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.sessions import SessionMiddleware
@@ -243,7 +243,7 @@ async def messages(chat_id: int, request: Request):
     client = await get_client(request)
     result = []
     async for message in client.iter_messages(chat_id, limit=50, reverse=True):
-        result.append({"id": message.id, "text": message.message or "", "out": bool(message.out), "date": message.date.isoformat() if message.date else "", "media": bool(message.media)})
+        result.append({"id": message.id, "text": message.message or "", "out": bool(message.out), "date": message.date.isoformat() if message.date else "", "media": bool(message.media), "filename": getattr(message.file, "name", None) if message.media else None, "mime_type": getattr(message.file, "mime_type", None) if message.media else None})
     return {"messages": result}
 
 
@@ -323,3 +323,22 @@ async def send_media(request: Request, chat_id: int, file: UploadFile = File(...
         return {"ok": True, "id": sent.id}
     except Exception:
         raise HTTPException(400, "Telegram could not send this file.")
+
+
+@app.get("/api/media/{chat_id}/{message_id}")
+async def download_media(chat_id: int, message_id: int, request: Request):
+    client = await get_client(request)
+    message = await client.get_messages(chat_id, ids=message_id)
+    if not message or not message.media:
+        raise HTTPException(404, "Media not found.")
+    try:
+        content = await client.download_media(message, file=bytes)
+        if not content:
+            raise HTTPException(404, "Telegram returned no media data.")
+        mime = getattr(message.file, "mime_type", None) or "application/octet-stream"
+        filename = Path(getattr(message.file, "name", None) or "telegram-media").name
+        return Response(content=content, media_type=mime, headers={"Content-Disposition": f'inline; filename="{filename}"'})
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(502, "Could not download this media from Telegram.")
