@@ -21,7 +21,8 @@ $("search").oninput=e=>{clearTimeout(searchTimer);const q=e.target.value;searchT
 $("search-clear").onclick=()=>{$("search").value="";runSearch("")};
 document.querySelectorAll(".filter-tab").forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;document.querySelectorAll(".filter-tab").forEach(x=>x.classList.toggle("active",x===b));runSearch($("search").value)});
 $("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST",body:"{}"});localStorage.removeItem("govind_mp_last_chat");location.reload()}catch(e){sendStatus(e.message,true)}};
-window.addEventListener("popstate",()=>{if(chatHistoryOpen){chatHistoryOpen=false;$("app-view").classList.remove("chat-open")}});\n$("back-button").onclick=()=>{if(innerWidth<=700){if(chatHistoryOpen)history.back();else $("app-view").classList.remove("chat-open")}};
+window.addEventListener("popstate",()=>{if(chatHistoryOpen){chatHistoryOpen=false;$("app-view").classList.remove("chat-open")}});
+$("back-button").onclick=()=>{if(innerWidth<=700){if(chatHistoryOpen)history.back();else $("app-view").classList.remove("chat-open")}};
 $("chat-search-button").onclick=()=>{const q=prompt("Search in this conversation");if(!q||!selected)return;const found=[...$("messages").querySelectorAll(".bubble")].find(b=>b.textContent.toLowerCase().includes(q.toLowerCase()));if(found){found.scrollIntoView({behavior:"smooth",block:"center"});found.classList.add("search-match")}else sendStatus("No matching message in the loaded messages.")};
 $("chat-menu-button").onclick=()=>{if(!selected)return;const action=prompt("Conversation options:\n1. Refresh messages\n2. Copy chat ID");if(action==="1")openChat(selected);if(action==="2")navigator.clipboard?.writeText(String(selected.id)).then(()=>sendStatus("Chat ID copied."),()=>sendStatus("Could not copy chat ID.",true))};
 (async()=>{try{csrf=(await api("/api/csrf")).csrf;const u=await api("/api/me");if(u.id)showApp()}catch(e){$("login-view").classList.remove("hidden")}})();
