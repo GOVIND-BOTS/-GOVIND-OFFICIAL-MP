@@ -58,7 +58,7 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="GOVIND OFFICIAL MP", lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key=APP_SECRET, session_cookie="govind_mp_session", max_age=604800, same_site="lax", https_only=COOKIE_SECURE)
+app.add_middleware(SessionMiddleware, secret_key=APP_SECRET, session_cookie="govind_mp_session", max_age=31536000, same_site="lax", https_only=COOKIE_SECURE)
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 
 
