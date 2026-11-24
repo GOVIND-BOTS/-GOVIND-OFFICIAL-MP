@@ -15,6 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from telethon import TelegramClient
 from telethon.errors import FloodWaitError, PhoneCodeExpiredError, PhoneCodeInvalidError, PhoneNumberInvalidError, SessionPasswordNeededError
 from telethon.sessions import StringSession
+from telethon.tl import functions
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.getenv("DATABASE_PATH", str(ROOT / "data" / "accounts.sqlite3")))
@@ -250,8 +251,39 @@ async def messages(chat_id: int, request: Request):
 @app.post("/api/messages")
 async def send_message(body: MessageBody, request: Request):
     csrf(request)
-    sent = await (await get_client(request)).send_message(body.chat_id, body.message)
-    return {"ok": True, "id": sent.id}
+    message = body.message.strip()
+    if not message:
+        raise HTTPException(400, "Message cannot be empty.")
+    try:
+        sent = await (await get_client(request)).send_message(body.chat_id, message, link_preview=True)
+        return {"ok": True, "id": sent.id}
+    except FloodWaitError as exc:
+        raise HTTPException(429, f"Telegram rate limit. Try again in {exc.seconds} seconds.")
+    except Exception as exc:
+        detail = str(exc) or "Telegram rejected the message."
+        raise HTTPException(400, detail[:240])
+
+
+@app.get("/api/search")
+async def search_telegram(q: str, request: Request):
+    query = q.strip()
+    if len(query) < 2:
+        return {"results": []}
+    if len(query) > 64:
+        raise HTTPException(400, "Search query is too long.")
+    client = await get_client(request)
+    try:
+        found = await client(functions.contacts.SearchRequest(q=query, limit=40))
+        results = []
+        for entity in list(found.chats) + list(found.users):
+            entity_id = entity.id
+            title = " ".join(filter(None, [getattr(entity, "first_name", None), getattr(entity, "last_name", None)])) or getattr(entity, "title", None) or getattr(entity, "username", None) or str(entity_id)
+            results.append({"id": entity_id, "name": title, "username": getattr(entity, "username", None), "kind": "group" if getattr(entity, "title", None) else "private"})
+        return {"results": results}
+    except FloodWaitError as exc:
+        raise HTTPException(429, f"Telegram rate limit. Try again in {exc.seconds} seconds.")
+    except Exception as exc:
+        raise HTTPException(400, (str(exc) or "Telegram search failed.")[:200])
 
 
 @app.post("/api/logout")
@@ -318,11 +350,14 @@ async def send_media(request: Request, chat_id: int, file: UploadFile = File(...
     if not content:
         raise HTTPException(400, "The selected file is empty.")
     client = await get_client(request)
+    caption = request.query_params.get("caption", "").strip()[:1024]
     try:
-        sent = await client.send_file(chat_id, BytesIO(content), file_name=Path(file.filename).name, caption="")
+        sent = await client.send_file(chat_id, BytesIO(content), file_name=Path(file.filename).name, caption=caption, force_document=False)
         return {"ok": True, "id": sent.id}
-    except Exception:
-        raise HTTPException(400, "Telegram could not send this file.")
+    except FloodWaitError as exc:
+        raise HTTPException(429, f"Telegram rate limit. Try again in {exc.seconds} seconds.")
+    except Exception as exc:
+        raise HTTPException(400, (str(exc) or "Telegram could not send this file.")[:240])
 
 
 @app.get("/api/media/{chat_id}/{message_id}")
