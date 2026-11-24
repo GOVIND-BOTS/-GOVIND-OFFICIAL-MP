@@ -4,9 +4,10 @@ import secrets
 import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
+from io import BytesIO
 
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -78,6 +79,21 @@ class PasswordBody(BaseModel):
 class MessageBody(BaseModel):
     chat_id: int
     message: str = Field(min_length=1, max_length=4096)
+
+
+class MessageAction(BaseModel):
+    chat_id: int
+    message_id: int
+
+
+class EditBody(MessageAction):
+    text: str = Field(min_length=1, max_length=4096)
+
+
+class ForwardBody(BaseModel):
+    from_chat_id: int
+    message_id: int
+    to_chat_id: int
 
 
 def csrf(request):
@@ -247,3 +263,63 @@ async def logout(request: Request):
         await client.disconnect()
     request.session.clear()
     return {"ok": True}
+
+
+@app.get("/api/contacts")
+async def contacts(request: Request):
+    client = await get_client(request)
+    result = []
+    async for user in client.iter_contacts():
+        result.append({"id": user.id, "name": " ".join(filter(None, [user.first_name, user.last_name])), "username": user.username, "phone": user.phone})
+    return {"contacts": result}
+
+
+@app.post("/api/messages/edit")
+async def edit_message(body: EditBody, request: Request):
+    csrf(request)
+    client = await get_client(request)
+    try:
+        await client.edit_message(body.chat_id, body.message_id, body.text)
+        return {"ok": True}
+    except Exception:
+        raise HTTPException(400, "Message could not be edited. You can only edit your own eligible messages.")
+
+
+@app.post("/api/messages/delete")
+async def delete_message(body: MessageAction, request: Request):
+    csrf(request)
+    client = await get_client(request)
+    try:
+        await client.delete_messages(body.chat_id, [body.message_id], revoke=True)
+        return {"ok": True}
+    except Exception:
+        raise HTTPException(400, "Message could not be deleted.")
+
+
+@app.post("/api/messages/forward")
+async def forward_message(body: ForwardBody, request: Request):
+    csrf(request)
+    client = await get_client(request)
+    try:
+        await client.forward_messages(body.to_chat_id, body.message_id, body.from_chat_id)
+        return {"ok": True}
+    except Exception:
+        raise HTTPException(400, "Message could not be forwarded.")
+
+
+@app.post("/api/media")
+async def send_media(request: Request, chat_id: int, file: UploadFile = File(...)):
+    csrf(request)
+    if not file.filename:
+        raise HTTPException(400, "Choose a file to upload.")
+    content = await file.read(20 * 1024 * 1024 + 1)
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(413, "Files must be 20 MB or smaller.")
+    if not content:
+        raise HTTPException(400, "The selected file is empty.")
+    client = await get_client(request)
+    try:
+        sent = await client.send_file(chat_id, BytesIO(content), file_name=Path(file.filename).name, caption="")
+        return {"ok": True, "id": sent.id}
+    except Exception:
+        raise HTTPException(400, "Telegram could not send this file.")
