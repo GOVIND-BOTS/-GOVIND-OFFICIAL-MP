@@ -260,6 +260,11 @@ async def send_message(body: MessageBody, request: Request):
     except FloodWaitError as exc:
         raise HTTPException(429, f"Telegram rate limit. Try again in {exc.seconds} seconds.")
     except Exception as exc:
+        error_name = type(exc).__name__
+        if error_name in {"ChatWriteForbiddenError", "UserBannedInChannelError"}:
+            raise HTTPException(403, "Telegram does not allow your account to send messages in this chat. Ask a group admin to enable your Send Messages permission, or check whether posting is restricted in this channel.")
+        if error_name == "ChatAdminRequiredError":
+            raise HTTPException(403, "This action requires administrator permission in this chat.")
         detail = str(exc) or "Telegram rejected the message."
         raise HTTPException(400, detail[:240])
 
