@@ -105,7 +105,7 @@ async def complete_login(request, phone, client):
     request.session.clear()
     request.session["user_id"] = user.id
     request.session["csrf"] = secrets.token_urlsafe(32)
-    return {"ok": True, "user": {"id": user.id, "name": user.first_name or ""}}
+    return {"ok": True, "csrf": request.session["csrf"], "user": {"id": user.id, "name": user.first_name or ""}}
 
 
 async def get_client(request):
