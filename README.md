@@ -11,10 +11,14 @@ An independent Telegram-compatible web client project built with FastAPI, Teleth
 - Encrypted storage of authorized Telethon StringSessions.
 - Responsive chat list and conversation view.
 - Read recent messages and send text messages.
+- List Telegram contacts.
+- Upload files up to 20 MB and open downloaded media.
+- Edit and delete eligible outgoing messages.
+- Forward messages to another chat by chat ID.
 - SQLite persistence for encrypted account sessions.
 - Docker and Render deployment foundation.
 
-This is an early development build, not a complete Telegram Web replacement. Media transfer, voice/video calls, stickers, contacts, group/channel administration, message editing/forwarding/deletion, live updates, multi-device controls and account registration are not implemented yet.
+This is an early development build, not a complete Telegram Web replacement. Voice/video calls, stickers, group/channel administration, live updates, multi-device controls and account registration are not implemented yet. Media and message actions are basic first-pass implementations.
 
 ## Requirements
 
