@@ -14,9 +14,9 @@
 </section></main>
 <main id="app-view" class="app-shell hidden">
 <aside class="sidebar"><header class="side-header"><div class="brand-small">G</div><div><strong>GOVIND OFFICIAL MP</strong><small id="profile-name">Connected</small></div><button id="logout" class="icon-button" title="Log out">↪</button></header>
-<div class="search-wrap"><input id="search" type="search" placeholder="Search chats"></div><nav id="chat-list" class="chat-list"></nav></aside>
+<div class="search-wrap"><input id="search" type="search" placeholder="Search chats"><button id="contacts-toggle" type="button">Contacts</button></div><nav id="contacts-panel" class="chat-list hidden"></nav><nav id="chat-list" class="chat-list"></nav></aside>
 <section class="conversation"><header class="chat-header"><div class="avatar" id="chat-avatar">G</div><div><strong id="chat-title">Select a chat</strong><small id="chat-subtitle">Your conversations appear here</small></div></header>
 <div id="messages" class="messages"><div class="empty-state">Choose a conversation to start messaging.</div></div>
-<form id="send-form" class="composer"><input id="message-input" placeholder="Write a message..." autocomplete="off" disabled><button id="send-button" disabled>Send</button></form></section></main>
+<form id="send-form" class="composer"><input id="message-input" placeholder="Write a message..." autocomplete="off" disabled><input id="file-input" type="file" class="file-input" disabled><button id="send-button" disabled>Send</button></form></section></main>
 <script src="/static/app.js"></script>
 </body></html>
