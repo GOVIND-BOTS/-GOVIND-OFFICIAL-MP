@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: govind-official-mp
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: SESSION_ENCRYPTION_KEY
+        sync: false
+      - key: APP_SECRET
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: DATABASE_PATH
+        value: /app/data/govind_official_mp.sqlite3
